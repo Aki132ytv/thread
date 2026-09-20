@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>The Red Thread of Fate</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --cream:      #F4ECE2;
+    --ivory:      #FAF6F0;
+    --charcoal:   #332C26;
+    --ink-soft:   rgba(51,44,38,0.90);
+    --crimson:    #B23A3A;
+    --deep-red:   #7A1F1F;
+    --terracotta: #C1694F;
+    --gold:       #C79A56;
+    --rich-gold:  #CE9A46;
+    --blush:      #E4B3A6;
+
+    --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+    --sans:  "Inter", "Helvetica Neue", Arial, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--charcoal);
+    font-family: var(--serif);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ============ Fixed cinematic stage ============ */
+  #stage {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* background tone (JS shifts it subtly across the journey) */
+  #bg { position: absolute; inset: 0; background: var(--cream); transition: none; }
+
+  /* faint paper grain — tactile, like a letter */
+  #grain {
+    position: absolute; inset: -50%;
+    width: 200%; height: 200%;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>");
+    background-size: 140px 140px;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  #vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(125% 115% at 50% 46%, transparent 52%, rgba(51,44,38,0.10) 100%);
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  #thread-svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+  }
+  #thread-path {
+    fill: none;
+    stroke: var(--crimson);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .glow #thread-path { filter: drop-shadow(0 0 5px rgba(178,58,58,0.30)); }
+
+  /* nodes: origin (left birth point) + head (traveling tip) */
+  .node-halo { fill: var(--crimson); opacity: 0.16; }
+  .node-core { fill: var(--crimson); }
+  #origin-halo { transform-box: fill-box; transform-origin: center; }
+  .breathe #origin-halo { animation: breathe 5.2s ease-in-out infinite; }
+  .breathe #head-halo   { animation: breathe 4.4s ease-in-out infinite; }
+  @keyframes breathe {
+    0%,100% { opacity: 0.10; }
+    50%     { opacity: 0.26; }
+  }
+
+  /* ============ Scroll-driven scenes ============ */
+  main { position: relative; z-index: 2; }
+
+  .scene { position: relative; width: 100%; }
+  /* generous heights → long, unhurried reading holds */
+  #s0 { height: 150vh; }
+  #s1 { height: 260vh; }
+  #s2 { height: 240vh; }
+  #s3 { height: 300vh; }
+  #s4 { height: 320vh; }
+  #s5 { height: 380vh; }
+  #s6 { height: 320vh; }
+  #s7 { height: 360vh; }
+  #s8 { height: 340vh; }
+
+  .pin {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8vw;
+  }
+  .copy {
+    max-width: 60ch;
+    /* sit in the upper reading zone, above the low-horizon thread */
+    transform: translateY(-13vh);
+    text-align: center;
+    opacity: 0;
+    will-change: opacity;
+  }
+  .copy.tight { max-width: 44ch; }
+
+  .line { margin: 0; }
+  .line + .line { margin-top: 0.85em; }
+
+  /* type roles */
+  .reflective {
+    font-weight: 400; font-style: italic;
+    font-size: clamp(28px, 4.4vw, 52px);
+    line-height: 1.32;
+    letter-spacing: 0.005em;
+    color: var(--ink-soft);
+  }
+  .narrative {
+    font-weight: 400;
+    font-size: clamp(24px, 3.6vw, 40px);
+    line-height: 1.5;
+    letter-spacing: 0.006em;
+    color: var(--ink-soft);
+  }
+  .apology {
+    font-weight: 400; font-style: italic;
+    font-size: clamp(26px, 4vw, 46px);
+    line-height: 1.4;
+    color: var(--ink-soft);
+  }
+  .name {
+    font-weight: 300;
+    font-size: clamp(46px, 9.5vw, 108px);
+    letter-spacing: 0.16em;
+    line-height: 1.05;
+    color: var(--deep-red);
+    padding-left: 0.16em;
+  }
+
+  /* word-level cinematic reveal */
+  .w {
+    display: inline-block;
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(0.42em);
+    transition:
+      opacity 1.15s cubic-bezier(.22,.61,.36,1),
+      filter  1.15s cubic-bezier(.22,.61,.36,1),
+      transform 1.15s cubic-bezier(.22,.61,.36,1);
+    will-change: opacity, transform, filter;
+  }
+  .w.on { opacity: 1; filter: blur(0); transform: none; }
+
+  /* the "I love you" beat */
+  .beat { display: inline-block; }
+  .beat .w {
+    color: var(--rich-gold);
+    font-style: italic;
+    transition:
+      opacity 1.15s cubic-bezier(.22,.61,.36,1),
+      filter  1.15s cubic-bezier(.22,.61,.36,1),
+      transform 1.4s cubic-bezier(.2,.8,.3,1);
+  }
+  .beat.lit .w.on { transform: scale(1.06); }
+
+  @media (max-width: 720px) {
+    .w { filter: none; transition: opacity 1.05s ease, transform 1.05s ease; }
+    .w.on { filter: none; }
+    .copy { transform: translateY(-9vh); }
+  }
+
+  /* scroll hint */
+  #hint {
+    position: absolute; left: 0; right: 0; bottom: 7vh;
+    text-align: center;
+    font-family: var(--serif); font-style: italic; font-weight: 400;
+    font-size: 17px; letter-spacing: 0.14em;
+    color: rgba(51,44,38,0.42);
+    opacity: 0;
+  }
+  #hint .chev { display: block; margin: 10px auto 0; width: 15px; height: 15px;
+    border-right: 1px solid rgba(51,44,38,0.4); border-bottom: 1px solid rgba(51,44,38,0.4);
+    transform: rotate(45deg); }
+
+  /* sound toggle */
+  #sound {
+    position: fixed; right: 18px; bottom: 18px; z-index: 10;
+    font-family: var(--sans); font-size: 11px; font-weight: 400;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: rgba(51,44,38,0.55);
+    background: rgba(250,246,240,0.55);
+    border: 1px solid rgba(51,44,38,0.18);
+    border-radius: 999px; padding: 8px 15px; cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: opacity .5s ease, color .3s, border-color .3s, background .3s;
+  }
+  #sound:hover { color: rgba(51,44,38,0.85); border-color: rgba(51,44,38,0.4); }
+  #sound[aria-pressed="true"] { color: var(--crimson); border-color: rgba(178,58,58,0.45); }
+
+  /* ============ reduced-motion static fallback ============ */
+  .reduced #stage { display: none; }
+  .reduced #sound { display: none; }
+  .reduced main { max-width: 40rem; margin: 0 auto; padding: 12vh 7vw 20vh; }
+  .reduced .scene { height: auto !important; }
+  .reduced .pin { position: static; height: auto; display: block; padding: 8vh 0; }
+  .reduced .copy {
+    transform: translateY(20px); opacity: 0;
+    transition: opacity 1s ease, transform 1s ease; max-width: none;
+  }
+  .reduced .copy.in { transform: none; opacity: 1; }
+  .reduced .w { opacity: 1; filter: none; transform: none; transition: none; }
+  .reduced .beat .w { transform: none; }
+  #rule { display: none; }
+  .reduced #rule {
+    display: block; width: 64px; height: 2px; margin: 0 auto 10vh;
+    background: var(--crimson); border-radius: 2px;
+  }
+
+  noscript .fallback {
+    display:block; max-width: 40rem; margin: 12vh auto; padding: 0 8vw;
+    font-style: italic; line-height: 1.7; font-size: 22px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ===================== Fixed stage ===================== -->
+  <div id="stage" aria-hidden="true">
+    <div id="bg"></div>
+    <svg id="thread-svg" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <g id="thread-group">
+        <path id="thread-path" d="" />
+        <circle id="origin-halo" class="node-halo" r="0" />
+        <circle id="origin-core" class="node-core" r="0" />
+        <circle id="head-halo" class="node-halo" r="0" />
+        <circle id="head-core" class="node-core" r="0" />
+      </g>
+    </svg>
+    <div id="grain"></div>
+    <div id="vignette"></div>
+    <div id="hint">scroll gently<span class="chev"></span></div>
+  </div>
+
+  <!-- ===================== Scenes ===================== -->
+  <main>
+    <svg id="rule" viewBox="0 0 64 2" aria-hidden="true"><rect width="64" height="2" rx="1"/></svg>
+
+    <section class="scene" id="s0"><div class="pin"></div></section>
+
+    <section class="scene" id="s1"><div class="pin">
+      <div class="copy tight"><p class="line reflective" data-line="s1"></p></div>
+    </div></section>
+
+    <section class="scene" id="s2"><div class="pin">
+      <div class="copy"><p class="line narrative" data-line="s2"></p></div>
+    </div></section>
+
+    <section class="scene" id="s3"><div class="pin">
+      <div class="copy"><p class="line narrative" data-line="s3"></p></div>
+    </div></section>
+
+    <section class="scene" id="s4"><div class="pin">
+      <div class="copy tight"><p class="line reflective" data-line="s4"></p></div>
+    </div></section>
+
+    <section class="scene" id="s5"><div class="pin">
+      <div class="copy tight">
+        <p class="line apology" data-line="s5a"></p>
+        <p class="line apology" data-line="s5b"></p>
+        <p class="line apology" data-line="s5c"></p>
+        <p class="line apology" data-line="s5d"></p>
+      </div>
+    </div></section>
+
+    <section class="scene" id="s6"><div class="pin">
+      <div class="copy"><p class="line narrative" data-line="s6"></p></div>
+    </div></section>
+
+    <section class="scene" id="s7"><div class="pin">
+      <div class="copy">
+        <p class="line name" data-line="s7a"></p>
+        <p class="line name" data-line="s7b"></p>
+        <p class="line name" data-line="s7c"></p>
+        <p class="line name" data-line="s7d"></p>
+      </div>
+    </div></section>
+
+    <section class="scene" id="s8"><div class="pin">
+      <div class="copy tight"><p class="line reflective" data-line="s8"></p></div>
+    </div></section>
+  </main>
+
+  <button id="sound" aria-pressed="false" aria-label="Toggle typing sound">sound off</button>
+
+  <noscript><div class="fallback">
+    <p>Baby, I am really sorry about what I said and what I did.</p>
+    <p>Everything started feeling so heavy about us.</p>
+    <p>I think I just had too much inside me. Jealousy. Fear. Overthinking. Everything kept piling up until, at some point, I just stopped feeling anything properly.</p>
+    <p>I don't know how hurtful I must have been when I was being so ruthless, when I acted like I didn't care. How could I say those things to you? To the person I love?</p>
+    <p>I am sorry for my harsh words. I am sorry for being rude. I am sorry for hurting you. I am sorry for everything.</p>
+    <p>But baby, please don't think that all of this means I don't love you. I love you. I just couldn't feel what I used to feel in that moment.</p>
+    <p>Patara. Gulo. Kargo. Sitsotskhleo.</p>
+    <p>If you need time, it's okay. Take your time. Be okay. I will still be here with you. And I am really, really sorry, baby.</p>
+  </div></noscript>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+    /* -------- content -------- */
+    var TEXT = {
+      s1:  "Baby, I am really sorry about what I said and what I did.",
+      s2:  "Everything started feeling so heavy about us.",
+      s3:  "I think I just had too much inside me. Jealousy. Fear. Overthinking. Everything kept piling up until, at some point, I just stopped feeling anything properly.",
+      s4:  "I don't know how hurtful I must have been when I was being so ruthless, when I acted like I didn't care. How could I say those things to you? To the person I love?",
+      s5a: "I am sorry for my harsh words.",
+      s5b: "I am sorry for being rude.",
+      s5c: "I am sorry for hurting you.",
+      s5d: "I am sorry for everything.",
+      s6:  [ {text:"But baby, please don't think that all of this means I don't love you. "},
+             {text:"I love you.", beat:true},
+             {text:" I just couldn't feel what I used to feel in that moment."} ],
+      s7a: "Patara", s7b: "Gulo", s7c: "Kargo", s7d: "Sitsotskhleo",
+      s8:  "If you need time, it's okay. Take your time. Be okay. I will still be here with you. And I am really, really sorry, baby."
+    };
+
+    /* -------- math -------- */
+    function clamp(v,a,b){return v<a?a:v>b?b:v;}
+    function clamp01(v){return clamp(v,0,1);}
+    function lerp(a,b,t){return a+(b-a)*t;}
+    function smooth(e0,e1,x){var t=clamp01((x-e0)/(e1-e0));return t*t*(3-2*t);}
+    function remap(x,a,b){return clamp01((x-a)/(b-a));}
+    function hexToRgb(h){h=h.replace("#","");return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)];}
+    function mix(a,b,t){return [Math.round(lerp(a[0],b[0],t)),Math.round(lerp(a[1],b[1],t)),Math.round(lerp(a[2],b[2],t))];}
+    function rgb(c){return "rgb("+c[0]+","+c[1]+","+c[2]+")";}
+
+    var COL = { crimson:hexToRgb("#B23A3A"), deep:hexToRgb("#7A1F1F"), terra:hexToRgb("#C1694F") };
+    var BG  = { cool:hexToRgb("#F4ECE2"), warm:hexToRgb("#FAF3EA"), blush:hexToRgb("#F7EDE9") };
+
+    /* -------- refs -------- */
+    var stage=document.getElementById("stage"),
+        svg=document.getElementById("thread-svg"),
+        path=document.getElementById("thread-path"),
+        group=document.getElementById("thread-group"),
+        oHalo=document.getElementById("origin-halo"), oCore=document.getElementById("origin-core"),
+        hHalo=document.getElementById("head-halo"),   hCore=document.getElementById("head-core"),
+        bg=document.getElementById("bg"),
+        vign=document.getElementById("vignette"),
+        hint=document.getElementById("hint"),
+        soundBtn=document.getElementById("sound");
+
+    var ORDER=["s1","s2","s3","s4","s5","s6","s7","s8"];
+    var sections={};
+    ["s0"].concat(ORDER).forEach(function(id){sections[id]=document.getElementById(id);});
+
+    /* -------- geometry -------- */
+    var W=0,H=0,baseY=0,SAMPLES=200,STEP=0,STROKE=0,narrow=false;
+    function geom(){
+      W=window.innerWidth; H=window.innerHeight;
+      narrow=W<720;
+      baseY=H*0.78;                          // low horizon
+      SAMPLES=narrow?120:220;
+      STROKE=narrow?2.5:3;
+      svg.setAttribute("viewBox","0 0 "+W+" "+H);
+      path.setAttribute("stroke-width",STROKE);
+      if(narrow) stage.classList.remove("glow"); else stage.classList.add("glow");
+    }
+
+    /* -------- thread state -------- */
+    var TS={ headFrac:0, knot:0, warm:0, waver:0 };
+
+    // one continuous thread from x=0 to x=headFrac*W, low horizon,
+    // with a subtle organic waver and a single loop (the "knot").
+    function threadPath(){
+      var headX = TS.headFrac * W;
+      if (headX < 2) return { d:"", head:[0,baseY] };
+
+      // knot lives just behind the head during the tense middle
+      var knotCenter = clamp(headX - W*0.14, W*0.10, W*0.92);
+      var region = W*0.14;
+      var loopR = TS.knot * (narrow? W*0.05 : W*0.055);
+
+      var pts=[];
+      var n = Math.max(24, Math.round(headX / (narrow?7:5)));
+      for(var i=0;i<=n;i++){
+        var t=i/n;
+        var x=t*headX;
+        var y=baseY;
+
+        // delicate multi-frequency waver — amplitude tied to scroll waver (alive only while moving)
+        var a = (narrow?5:7) * (0.5 + TS.waver);
+        var f = x/W;
+        y += Math.sin(f*Math.PI*6.0 + 0.4)*a*0.5
+           + Math.sin(f*Math.PI*13.0 + 1.9)*a*0.28
+           + Math.sin(f*Math.PI*3.0)*a*0.35;
+
+        // the loop: closed bulge that crosses itself, zero at region edges
+        if(loopR>0.3){
+          var d=(x-knotCenter)/region;
+          if(Math.abs(d)<1){
+            var env=Math.cos(d*Math.PI*0.5); env=env*env;      // smooth 0..1..0
+            var ang=(d+1)*Math.PI;                              // one full turn across region
+            x += Math.sin(ang)*loopR*env;
+            y += (Math.cos(ang)-1)*loopR*0.62*env;              // dip upward, return
+          }
+        }
+        pts.push([x,y]);
+      }
+
+      // Catmull-Rom -> bezier
+      var d="M"+pts[0][0].toFixed(2)+","+pts[0][1].toFixed(2);
+      for(var j=0;j<pts.length-1;j++){
+        var p0=pts[j?j-1:0], p1=pts[j], p2=pts[j+1], p3=pts[j+2<pts.length?j+2:pts.length-1];
+        d+="C"+(p1[0]+(p2[0]-p0[0])/6).toFixed(2)+","+(p1[1]+(p2[1]-p0[1])/6).toFixed(2)+" "+
+              (p2[0]-(p3[0]-p1[0])/6).toFixed(2)+","+(p2[1]-(p3[1]-p1[1])/6).toFixed(2)+" "+
+               p2[0].toFixed(2)+","+p2[1].toFixed(2);
+      }
+      return { d:d, head:pts[pts.length-1] };
+    }
+
+    function renderThread(){
+      var r=threadPath();
+      path.setAttribute("d", r.d);
+
+      var c=mix(COL.crimson,COL.deep,TS.warm*0.55);
+      path.style.stroke=rgb(c);
+
+      // origin node — anchored at true left edge
+      var oR=STROKE*2.0;
+      oHalo.setAttribute("cx",0); oHalo.setAttribute("cy",baseY); oHalo.setAttribute("r",oR*3.2);
+      oCore.setAttribute("cx",0); oCore.setAttribute("cy",baseY); oCore.setAttribute("r",oR);
+      oHalo.style.fill=rgb(c); oCore.style.fill=rgb(c);
+
+      // head node — the traveling tip
+      var showHead = TS.headFrac>0.004 && TS.headFrac<0.996;
+      var hx=r.head[0], hy=r.head[1];
+      hCore.setAttribute("cx",hx); hCore.setAttribute("cy",hy); hCore.setAttribute("r",STROKE*1.7);
+      hHalo.setAttribute("cx",hx); hHalo.setAttribute("cy",hy); hHalo.setAttribute("r",STROKE*5.5);
+      hCore.style.fill=rgb(c); hHalo.style.fill=rgb(c);
+      hCore.style.opacity=showHead?1:0;
+      hHalo.style.opacity=showHead?0.18:0;
+    }
+
+    /* -------- text split -------- */
+    var LINES={};
+    function build(id){
+      var el=document.querySelector('[data-line="'+id+'"]'); if(!el) return;
+      var content=TEXT[id];
+      var segs = typeof content==="string" ? [{text:content}] : content;
+      var words=[], beat=null;
+      segs.forEach(function(seg){
+        var host=el;
+        if(seg.beat){ host=document.createElement("span"); host.className="beat"; el.appendChild(host); beat={start:0,end:0}; beat.start=words.length; }
+        var parts=seg.text.split(" ");
+        parts.forEach(function(word,i){
+          if(word.length){
+            var w=document.createElement("span"); w.className="w"; w.textContent=word;
+            host.appendChild(w); words.push(w);
+          }
+          if(i<parts.length-1) host.appendChild(document.createTextNode(" "));
+        });
+        if(seg.beat) beat.end=words.length;
+      });
+      LINES[id]={words:words,total:words.length,beat:beat,el:el,shown:0};
+    }
+    function reveal(id,count){
+      var L=LINES[id]; if(!L) return;
+      count=clamp(Math.round(count),0,L.total);
+      if(count===L.shown){ litBeat(L,count); return; }
+      var i;
+      if(count>L.shown){ for(i=L.shown;i<count;i++) L.words[i].classList.add("on"); tick(count-L.shown); }
+      else { for(i=L.shown-1;i>=count;i--) L.words[i].classList.remove("on"); }
+      L.shown=count; litBeat(L,count);
+    }
+    function litBeat(L,count){
+      if(!L.beat) return;
+      var b=L.el.querySelector(".beat"); if(!b) return;
+      if(count>=L.beat.end) b.classList.add("lit"); else b.classList.remove("lit");
+    }
+    function allOn(){ Object.keys(LINES).forEach(function(id){var L=LINES[id];L.words.forEach(function(w){w.classList.add("on");});L.shown=L.total;}); }
+
+    /* -------- scene progress from cached offsets (smooth-scroll friendly) -------- */
+    var META={}, docMax=1;
+    function measure(){
+      docMax=Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      Object.keys(sections).forEach(function(id){
+        var s=sections[id];
+        META[id]={top:s.offsetTop, travel:Math.max(1, s.offsetHeight - window.innerHeight)};
+      });
+    }
+    function sceneP(id,y){ return clamp01((y-META[id].top)/META[id].travel); }
+
+    // copy fade envelope: quick in, LONG hold, gentle out (last scene never fades out)
+    function envelope(p,fadeOut){
+      var i=smooth(0.06,0.26,p);
+      var o=fadeOut?(1-smooth(0.90,1.0,p)):1;
+      return i*o;
+    }
+    function copyOpacity(id,v){ var c=sections[id].querySelector(".copy"); if(c) c.style.opacity=v; }
+
+    /* -------- head travel: advance early in each scene, then HOLD -------- */
+    // stations map scene index -> headFrac at its end. Head moves through the
+    // first ADV of a scene, then holds while the reader reads.
+    var STN=[0.06,0.16,0.30,0.44,0.56,0.72,0.86,1.0]; // end-of-scene head fractions for s1..s8
+    var ADV=0.34; // fraction of a scene's scroll used to advance the head
+    function headTravel(y){
+      // before s1 (intro): ease head slightly off the origin
+      var p0=sceneP("s0",y);
+      if(y<META.s1.top) return lerp(0.0,0.06,smooth(0.15,1.0,p0));
+      for(var k=0;k<ORDER.length;k++){
+        var id=ORDER[k]; var p=sceneP(id,y);
+        if(p<0.9999 || k===ORDER.length-1){
+          var from=k===0?0.06:STN[k-1];
+          var to=STN[k];
+          return lerp(from,to,smooth(0,ADV,p));
+        }
+      }
+      return 1;
+    }
+
+    /* -------- master update (pure function of smoothed scroll) -------- */
+    var lastState={};
+    function update(y){
+      var p={};
+      ["s0"].concat(ORDER).forEach(function(id){p[id]=sceneP(id,y);});
+      var g=clamp01(y/docMax);
+
+      TS.headFrac=headTravel(y);
+
+      // knot: forms in s3, holds through s4, loosens s5→s6, then a small clean tie reforms in s8
+      var k=smooth(0.1,0.85,p.s3);
+      k*=(1-smooth(0.05,0.7,p.s5));
+      k=Math.max(k*(1-smooth(0.0,0.5,p.s6)), 0);
+      k=Math.max(k, smooth(0.35,0.9,p.s8)*0.45);
+      TS.knot=clamp01(k);
+
+      TS.warm=clamp01(0.5*p.s6+0.5*p.s7+p.s8*0.4);
+
+      renderThread();
+
+      // background tone shift + vignette breathing
+      var bgc=mix(BG.cool,BG.warm, clamp01(0.4*p.s5+0.6*p.s6));
+      bgc=mix(bgc,BG.blush, clamp01(0.5*p.s7+0.5*p.s8));
+      bg.style.background=rgb(bgc);
+      vign.style.opacity = 0.55 + 0.28*smooth(0.2,1.0,p.s3)*(1-smooth(0.0,0.8,p.s6));
+
+      // hint only at rest
+      hint.style.opacity = (1 - smooth(0.05,0.5,p.s0)) * (y<20?1:0.0001>0?1:1);
+      hint.style.opacity = 1 - smooth(0.05,0.45,p.s0);
+
+      // ---- text: fast-in, long hold ----
+      copyOpacity("s1",envelope(p.s1,true)); reveal("s1",LINES.s1.total*remap(p.s1,0.08,0.24));
+      copyOpacity("s2",envelope(p.s2,true)); reveal("s2",LINES.s2.total*remap(p.s2,0.10,0.26));
+      copyOpacity("s3",envelope(p.s3,true)); reveal("s3",LINES.s3.total*remap(p.s3,0.12,0.34));
+      copyOpacity("s4",envelope(p.s4,true)); reveal("s4",LINES.s4.total*remap(p.s4,0.12,0.36));
+
+      copyOpacity("s5",envelope(p.s5,true));
+      reveal("s5a",LINES.s5a.total*remap(p.s5,0.06,0.18));
+      reveal("s5b",LINES.s5b.total*remap(p.s5,0.24,0.36));
+      reveal("s5c",LINES.s5c.total*remap(p.s5,0.42,0.54));
+      reveal("s5d",LINES.s5d.total*remap(p.s5,0.60,0.72));
+
+      copyOpacity("s6",envelope(p.s6,true)); reveal("s6",LINES.s6.total*remap(p.s6,0.10,0.34));
+
+      copyOpacity("s7",envelope(p.s7,true));
+      reveal("s7a",LINES.s7a.total*remap(p.s7,0.06,0.16));
+      reveal("s7b",LINES.s7b.total*remap(p.s7,0.24,0.34));
+      reveal("s7c",LINES.s7c.total*remap(p.s7,0.42,0.52));
+      reveal("s7d",LINES.s7d.total*remap(p.s7,0.60,0.72));
+
+      copyOpacity("s8",envelope(p.s8,false)); reveal("s8",LINES.s8.total*remap(p.s8,0.10,0.40));
+
+      lastState={y:y,head:TS.headFrac,knot:TS.knot,warm:TS.warm};
+    }
+
+    /* -------- buttery smoothing loop (hand-rolled lerp) -------- */
+    var target=0, cur=0, running=false, fullMode=false;
+    function readTarget(){ target=window.pageYOffset||document.documentElement.scrollTop||0; }
+    function loop(){
+      var diff=target-cur;
+      // waver amplitude follows scroll velocity → thread is alive only while moving
+      TS.waver = clamp01(Math.abs(diff)/220);
+      if(Math.abs(diff)<0.4){ cur=target; update(cur); running=false; TS.waver=0; update(cur); return; }
+      cur+=diff*0.09;                    // slow cinematic glide
+      update(cur);
+      requestAnimationFrame(loop);
+    }
+    function wake(){ if(!fullMode) return; readTarget(); if(!running){ running=true; requestAnimationFrame(loop); } }
+
+    /* -------- sound (opt-in) -------- */
+    var actx=null,son=false,last=0;
+    function tick(n){
+      if(!son||!actx) return;
+      var now=performance.now(); if(now-last<40) return; last=now;
+      var o=actx.createOscillator(),g=actx.createGain();
+      o.type="sine"; o.frequency.value=440+Math.random()*120;
+      g.gain.setValueAtTime(0.0001,actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.04,actx.currentTime+0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+0.12);
+      o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime+0.13);
+    }
+    soundBtn.addEventListener("click",function(){
+      son=!son;
+      if(son&&!actx){var AC=window.AudioContext||window.webkitAudioContext; if(AC) actx=new AC();}
+      if(son&&actx&&actx.state==="suspended") actx.resume();
+      soundBtn.setAttribute("aria-pressed",son?"true":"false");
+      soundBtn.textContent=son?"sound on":"sound off";
+    });
+
+    /* -------- boot -------- */
+    Object.keys(TEXT).forEach(build);
+    geom(); measure();
+
+    var reduceMQ=window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    function initFull(){
+      fullMode=true;
+      document.body.classList.remove("reduced");
+      stage.classList.add("breathe");
+      cur=target=0; update(0);
+      window.addEventListener("scroll",wake,{passive:true});
+      if(window.gsap&&window.ScrollTrigger){
+        gsap.registerPlugin(ScrollTrigger);
+        ScrollTrigger.create({trigger:document.body,start:0,end:"max",onUpdate:wake,onRefresh:function(){measure();wake();}});
+      }
+      // expose state for verification
+      window.__RT=function(){return lastState;};
+    }
+    function initReduced(){
+      fullMode=false;
+      document.body.classList.add("reduced");
+      allOn();
+      var obs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)e.target.classList.add("in");});},{threshold:0.18});
+      document.querySelectorAll(".copy").forEach(function(c){obs.observe(c);});
+    }
+
+    if(reduceMQ.matches) initReduced(); else initFull();
+    if(reduceMQ.addEventListener) reduceMQ.addEventListener("change",function(){location.reload();});
+
+    var rt;
+    window.addEventListener("resize",function(){
+      clearTimeout(rt);
+      rt=setTimeout(function(){ geom(); measure(); if(fullMode){ update(cur); if(window.ScrollTrigger) ScrollTrigger.refresh(); } },160);
+    });
+
+    // fonts can shift metrics → re-measure once loaded
+    if(document.fonts&&document.fonts.ready) document.fonts.ready.then(function(){ measure(); if(fullMode) update(cur); });
+  })();
+  </script>
+</body>
+</html>
